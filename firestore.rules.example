@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// Template. Copy to firestore.rules (gitignored) and replace example[.]edu with your college domain.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function member() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('.*@example[.]edu$');
+    }
+
+    // End of 31 Oct 2026 IST (lib/pr.ts DEADLINE)
+    function open() {
+      return request.time < timestamp.value(1793471400000);
+    }
+
+    function owns(data) {
+      return data.uid == request.auth.uid;
+    }
+
+    function valid(id) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['uid', 'email', 'prUrl', 'owner', 'repo', 'number', 'type', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['uid', 'email', 'prUrl', 'owner', 'repo', 'number', 'type', 'createdAt', 'updatedAt'])
+        && owns(d)
+        && d.email == request.auth.token.email
+        && d.owner is string && d.owner.matches('^[A-Za-z0-9_.-]+$')
+        && d.repo is string && d.repo.matches('^[A-Za-z0-9_.-]+$')
+        && d.number is int && d.number > 0
+        && d.prUrl == 'https://github.com/' + d.owner + '/' + d.repo + '/pull/' + string(d.number)
+        && id == (d.owner + '__' + d.repo + '__' + string(d.number)).lower()
+        && d.type in ['sosc', 'external']
+        && d.updatedAt == request.time;
+    }
+
+    match /submissions/{id} {
+      // `resource == null` lets the client check whether a PR id is free before writing
+      allow get: if member() && (resource == null || owns(resource.data));
+      allow list: if member() && owns(resource.data);
+      allow create: if member() && open() && valid(id)
+        && request.resource.data.createdAt == request.time;
+      allow update: if member() && open() && owns(resource.data) && valid(id)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if member() && open() && owns(resource.data);
+    }
+  }
+}

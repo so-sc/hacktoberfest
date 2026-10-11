@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  /* SOSC daylight: white page, ink text. SOSC's primary green (#3ce56e) carries fills, tiles and icons;
+     it is too light for small text on white (~1.6:1), so readable text stays ink. */
+  --color-paper: #ffffff;
+  --color-paper-2: #f2f4f2;
+  --color-ink: #0b0b0b;
+  --color-muted: #4b5d4f;
+  --color-line: rgb(11 11 11 / 0.14);
+  --color-neon: #3ce56e;
+  --color-neon-2: #0ade4a;
+  /* deep green for lines and outlines, so decoration never goes black */
+  --color-forest: #11732f;
+  --color-danger: #c43a1c;
+}
+
+@theme inline {
+  --font-display: var(--font-righteous);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  overscroll-behavior: none;
+}
+
+::selection {
+  background: var(--color-neon);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+
+[data-fire] > span {
+  position: absolute;
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.35);
+}
+
+/* native select, re-skinned */
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b0b0b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0 center;
+  background-size: 1.1rem;
+}
+.select option {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
