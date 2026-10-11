@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SOSC Hacktoberfest 2026
 
-## Getting Started
+**May the source be with you.**
 
-First, run the development server:
+Hacktoberfest is a month-long celebration of open source every October. SOSC runs its own Hacktoberfest drive for the college community. Contribute to open-source projects throughout the month, and log every pull request you make in one place.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## How to take part
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Find a project.** Pick an SOSC repository or any open-source project on GitHub.
+2. **Make a contribution.** Fix a bug, improve the docs, add a feature, then open a pull request.
+3. **Log it.** Sign in with your college Google account and submit the PR link.
+4. **Keep going.** Log every PR you open during October. You can edit or remove your entries until the deadline.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## What counts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Any pull request you open on GitHub during October.
+- Each PR is marked as either:
+  - **SOSC project:** a contribution to an SOSC repository.
+  - **External project:** a contribution anywhere else in open source.
+- Each pull request can be logged once.
 
-## Learn More
+## About SOSC
 
-To learn more about Next.js, take a look at the following resources:
+SOSC is a student-led, open-source, community-first group building in Mangalore. Find out more at [sosc.org.in](https://sosc.org.in).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This repository is the event's website, where participants sign in and log their pull requests.
