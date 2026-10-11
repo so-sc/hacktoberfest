@@ -2,7 +2,7 @@ import { useId } from "react";
 import { gsap } from "gsap";
 
 // Traced from the event mascot reference: antennae, hollow eyes, hanging arms, two legs.
-const MAP = [
+export const MAP = [
   ".X.........X.",
   "..X.......X..",
   "...XXXXXXX...",

@@ -8,7 +8,7 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 
 
-const TITLE = "Hacktoberfest 2026 × SOSC";
+const TITLE = "SOSC Hacktoberfest 2026";
 const DESCRIPTION =
   "SOSC's Hacktoberfest 2026: open pull requests on SOSC and open-source projects all October, then log every one here before 31 October, 11:59 PM IST.";
 

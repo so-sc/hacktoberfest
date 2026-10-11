@@ -5,7 +5,7 @@ import { Experience } from "./components/Experience";
 const EVENT = {
   "@context": "https://schema.org",
   "@type": "Event",
-  name: "Hacktoberfest 2026 × SOSC",
+  name: "SOSC Hacktoberfest 2026",
   description: "Open pull requests on SOSC and open-source projects all October and log every one before 31 October, 11:59 PM IST.",
   startDate: "2026-10-01T00:00:00+05:30",
   endDate: "2026-10-31T23:59:59+05:30",

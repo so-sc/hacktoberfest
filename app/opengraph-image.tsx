@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Hacktoberfest 2026 × SOSC: open PRs all October";
+export const alt = "SOSC Hacktoberfest 2026: open PRs all October";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
