@@ -23,14 +23,8 @@ export function Icon({ d, className, children }: { d?: string; className?: strin
 // two-tone: the main stroke takes the piece's green (currentColor), accents are ink
 const INK = "var(--color-ink)";
 
-const PrIcon = ({ className }: { className?: string }) => (
-  <Icon className={className} d="M18 15.75V10a3 3 0 0 0-3-3h-4.5M13 4.5 10.5 7 13 9.5">
-    <path d="M6 8.25v7.5" stroke={INK} />
-    <circle cx="6" cy="6" r="2.25" stroke={INK} />
-    <circle cx="6" cy="18" r="2.25" stroke={INK} />
-    <circle cx="18" cy="18" r="2.25" />
-  </Icon>
-);
+
+
 const BranchIcon = ({ className }: { className?: string }) => (
   <Icon className={className} d="M6 8.25v7.5M18 8.25c0 4.5-6 4-10.4 8.2">
     <circle cx="6" cy="6" r="2.25" />
@@ -38,17 +32,13 @@ const BranchIcon = ({ className }: { className?: string }) => (
     <circle cx="18" cy="6" r="2.25" stroke={INK} />
   </Icon>
 );
-const CommitIcon = ({ className }: { className?: string }) => (
-  <Icon className={className} d="M2 12h6M16 12h6">
-    <circle cx="12" cy="12" r="4" stroke={INK} />
+const PrIcon = ({ className }: { className?: string }) => (
+  <Icon className={className} d="M18 15.75V10a3 3 0 0 0-3-3h-4.5M13 4.5 10.5 7 13 9.5">
+    <path d="M6 8.25v7.5" stroke={INK} />
+    <circle cx="6" cy="6" r="2.25" stroke={INK} />
+    <circle cx="6" cy="18" r="2.25" stroke={INK} />
+    <circle cx="18" cy="18" r="2.25" />
   </Icon>
-);
-
-/** pixel sparkle, same voxel language as the alien */
-const Sparkle = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 5 5" className={className} aria-hidden shapeRendering="crispEdges">
-    <path fill="currentColor" d="M2 0h1v2h2v1H3v2H2V3H0V2h2z" />
-  </svg>
 );
 
 /** code glyphs set in type: g = green part, k = ink part, e.g. "</>" as g"<" k"/" g">" */
@@ -67,35 +57,46 @@ const Glyph = ({ parts, size }: { parts: [string, "g" | "k"][]; size: string }) 
    Green with ink accents. fire.ts spreads them through the white space, clear of the fire and content. */
 
 
-// a pool of pieces at one modest size; buildWall spreads as many as the white space comfortably holds
-const ICON = "size-[calc(var(--t)*1.3)] text-neon-2";
-const TYPE = "text-[calc(var(--t)*1.15)]";
+// One piece per corner of the white area plus one above and one below the content, each tilted a little like a sticker (uneven angles read
+// hand-placed rather than patterned). fire.ts anchors each to its corner.
+const ICON = "size-[calc(var(--t)*1.8)] text-neon-2";
+const TYPE = "text-[calc(var(--t)*1.6)]";
 
-const PIECES: ReactNode[] = [
-  <Glyph key="code" size={TYPE} parts={[["<", "g"], ["/", "k"], [">", "g"]]} />,
-  <BranchIcon key="branch" className={ICON} />,
-  <Glyph key="braces" size={TYPE} parts={[["{", "g"], ["·", "k"], ["}", "g"]]} />,
-  <PrIcon key="pr" className={ICON} />,
-  <Glyph key="arrow" size={TYPE} parts={[["=", "g"], [">", "k"]]} />,
-  <CommitIcon key="commit" className={ICON} />,
-  <Sparkle key="spark" className="size-[calc(var(--t)*0.8)] text-neon" />,
-  <Glyph key="and" size={TYPE} parts={[["&", "g"], ["&", "k"]]} />,
-  <PrIcon key="pr2" className={ICON} />,
-  <Glyph key="hash" size={TYPE} parts={[["#", "g"], ["!", "k"]]} />,
-  <BranchIcon key="branch2" className={ICON} />,
-  <Glyph key="inc" size={TYPE} parts={[["+", "g"], ["+", "k"]]} />,
-  <Sparkle key="spark2" className="size-[calc(var(--t)*0.8)] text-ink" />,
-  <Glyph key="cmt" size={TYPE} parts={[["/", "k"], ["/", "g"]]} />,
-  <CommitIcon key="commit2" className={ICON} />,
-  <Glyph key="prompt" size={TYPE} parts={[["$", "g"], ["_", "k"]]} />,
+const PIECES: [corner: "tl" | "tr" | "bl" | "br" | "t" | "b", el: ReactNode, tilt: number][] = [
+  ["tl", <Glyph key="braces" size={TYPE} parts={[["{", "g"], ["·", "k"], ["}", "g"]]} />, -9],
+  ["tr", <PrIcon key="pr" className={ICON} />, 8],
+  ["bl", <Glyph key="prompt" size={TYPE} parts={[[">", "g"], ["_", "k"]]} />, 6],
+  ["br", <Glyph key="and" size={TYPE} parts={[["&", "g"], ["&", "k"]]} />, -11],
+  ["t", <Glyph key="code" size={TYPE} parts={[["<", "g"], ["/", "k"], [">", "g"]]} />, 4],
+  ["b", <BranchIcon key="branch" className={ICON} />, -6],
+];
+
+// small light-gray code crumbs that fill the gaps between everything else
+const FILLERS: [text: string, tilt: number][] = [
+  ["+", 0], [";", 8], ["//", -6], ["{}", 5], ["#", -10], ["0", 0], ["1", 6], ["~", -4],
+  ["()", 7], ["*", 0], ["<>", -8], ["=", 4], ["$", -5], ["[]", 9], ["!", -3], ["01", 5],
+  ["&", -7], ["%", 6], ["::", 0], ["?", -9], ["|", 4], ["^", -5], ["..", 0], ["@", 7],
+  ["+", -6], ["-", 0], ["/*", 5], ["}", -8], ["{", 6], ["10", -4], ["#", 9], [">", 0],
+  ["*/", -5], ["0x", 4], ["=>", -7], [";", 3],
 ];
 
 export function Pieces() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
-      {PIECES.map((el, i) => (
-        <div key={i} data-asset className="invisible absolute top-0 left-0">
-          {el}
+      {FILLERS.map(([text, tilt], i) => (
+        <span
+          key={i}
+          data-filler
+          style={{ rotate: `${tilt}deg` }}
+          className="invisible absolute top-0 left-0 font-mono text-[calc(var(--t)*0.55)] leading-none font-bold text-[#d3d9d5] [font-variant-ligatures:none]"
+        >
+          {text}
+        </span>
+      ))}
+      {PIECES.map(([corner, el, tilt]) => (
+        <div key={corner} data-asset data-corner={corner} className="invisible absolute top-0 left-0">
+          {/* tilt lives on the inner box so GSAP's exit rotation on the wrapper adds to it */}
+          <div style={{ rotate: `${tilt}deg` }}>{el}</div>
         </div>
       ))}
     </div>

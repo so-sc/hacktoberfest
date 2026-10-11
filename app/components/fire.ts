@@ -12,7 +12,11 @@ function hash(a: number, b: number, c: number) {
 // solid at the edge, cooling to pale tints at the tip
 function heat(q: number, h: number) {
   const band =
-    q < 0.4 ? ["#0ade4a", "#3ce56e"] : q < 0.65 ? ["#3ce56e", "#6aeb8f"] : q < 0.85 ? ["#6aeb8f", "#95f1b0"] : ["#95f1b0", "#c0f6d0"];
+    q < 0.25 ? ["#0ade4a", "#3ce56e"]
+    : q < 0.5 ? ["#3ce56e", "#6aeb8f"]
+    : q < 0.7 ? ["#6aeb8f", "#95f1b0"]
+    : q < 0.86 ? ["#95f1b0", "#c0f6d0"]
+    : ["#c0f6d0", "#e2fbe9"];
   return band[h < 0.5 ? 0 : 1];
 }
 
@@ -75,7 +79,8 @@ export function buildWall(stage: HTMLElement) {
       const tongue =
         half * (0.17 + 0.1 * Math.sin(r * 0.52 + phase) + 0.06 * Math.sin(r * 1.41 + phase * 2) + 0.12 * edge * edge) +
         (hash(r, side, 1) - 0.5) * 3;
-      const len = Math.max(0, Math.min(room - 1, Math.round(tongue)));
+      // stop two cells short of the content so the centre stays quiet
+      const len = Math.max(0, Math.min(room - 2, Math.round(tongue)));
       for (let d = 0; d < len; d++) {
         const q = d / len;
         // ragged tip: holes become likelier toward the end of the flame
@@ -83,18 +88,15 @@ export function buildWall(stage: HTMLElement) {
         put(r, col(d), heat(q, hash(r, d, side + 3)), side, d, len);
       }
       // embers drifting off the tip
-      for (let k = 1; k <= 3; k++) {
-        if (hash(r, k, side + 11) > 0.45 / k) continue;
+      for (let k = 1; k <= 2; k++) {
+        if (hash(r, k, side + 11) > 0.25 / k) continue;
         const d = len + k + (hash(r, k, side + 13) < 0.3 ? 1 : 0);
-        if (d < room - 1) put(r, col(d), hash(r, k, side + 17) < 0.5 ? "#c0f6d0" : "#e2fbe9", side, d, len);
+        if (d < room - 2) put(r, col(d), hash(r, k, side + 17) < 0.5 ? "#c0f6d0" : "#e2fbe9", side, d, len);
       }
     }
   }
   fire.replaceChildren(...tiles);
 
-  /* pieces: spread through the white space, not pinned to spots. Each piece takes the free position that is
-     farthest from everything already there (content, fire, earlier pieces), with a little hashed jitter so
-     the result is even but not symmetric. Pieces stop once the best spot would crowd its neighbours. */
   const fireCells = tiles.map((el) => [
     Math.round((parseFloat(el.style.left) - x0) / t),
     Math.round((parseFloat(el.style.top) - y0) / t),
@@ -105,42 +107,99 @@ export function buildWall(stage: HTMLElement) {
     for (let y = Math.max(0, r - halo); y <= Math.min(R - 1, r + halo); y++)
       for (let x = Math.max(0, c - halo); x <= Math.min(C - 1, c + halo); x++) grid[y][x] = true;
 
-  // distance (in cells) from each cell to the nearest obstacle: content box or fire
+  // one piece per corner of the white area (plus one above and one below the content): each sits on the diagonal between the content's corner and the
+  // screen's corner, nudged to the nearest spot that is clear of the fire halo, the content and the other pieces
   const cx0 = (content.left - x0) / t, cx1 = (content.right - x0) / t;
   const cy0 = (content.top - y0) / t, cy1 = (content.bottom - y0) / t;
-  const toContent = (x: number, y: number) => Math.hypot(Math.max(cx0 - x, 0, x - cx1), Math.max(cy0 - y, 0, y - cy1));
-  const toFire = (x: number, y: number) => {
-    let m = Infinity;
-    for (const [c, r] of fireCells) m = Math.min(m, Math.hypot(c + 0.5 - x, r + 0.5 - y));
-    return m;
+  // null = no constraint on that axis (the top/bottom pieces sit centred above and below the content)
+  const CORNER: Record<string, [x: number, y: number, left: boolean | null, top: boolean]> = {
+    tl: [cx0 * 0.55, cy0 * 0.55, true, true],
+    tr: [cx1 + (C - cx1) * 0.45, cy0 * 0.55, false, true],
+    bl: [cx0 * 0.55, cy1 + (R - cy1) * 0.45, true, false],
+    br: [cx1 + (C - cx1) * 0.45, cy1 + (R - cy1) * 0.45, false, false],
+    t: [(cx0 + cx1) / 2, cy0 * 0.5, null, true],
+    b: [(cx0 + cx1) / 2, cy1 + (R - cy1) * 0.5, null, false],
   };
-  const placed: [number, number][] = [];
-  const minSpacing = 3.2; // cells between piece centres
 
-  stage.querySelectorAll<HTMLElement>("[data-asset]").forEach((el, i) => {
+  const taken: [number, number][] = []; // centres of placed pieces, in cells
+  const pieceBoxes: [number, number, number, number][] = []; // cells claimed by each piece (with margin)
+  stage.querySelectorAll<HTMLElement>("[data-asset]").forEach((el) => {
     el.style.visibility = "hidden";
-    const cw = Math.ceil((el.offsetWidth + t * 0.4) / t);
-    const ch = Math.ceil((el.offsetHeight + t * 0.4) / t);
-    let best: { c: number; r: number; d: number; score: number } | null = null;
+    const [tx, ty, left, top] = CORNER[el.dataset.corner ?? "tl"];
+    const cw = Math.ceil((el.offsetWidth + t * 0.5) / t);
+    const ch = Math.ceil((el.offsetHeight + t * 0.5) / t);
+    let best: { c: number; r: number; d: number } | null = null;
     for (let r = 0; r + ch <= R; r++)
       for (let c = 0; c + cw <= C; c++) {
-        // fully on screen and on free cells
+        const mx = c + cw / 2, my = r + ch / 2;
+        // stay in this piece's quadrant, fully on screen, on free cells
+        if ((left !== null && mx < C / 2 !== left) || my < R / 2 !== top) continue;
         if (x0 + c * t < 0 || y0 + r * t < 0 || x0 + (c + cw) * t > W || y0 + (r + ch) * t > H) continue;
         let ok = true;
         for (let y = r; y < r + ch && ok; y++) for (let x = c; x < c + cw; x++) if (grid[y][x]) { ok = false; break; }
         if (!ok) continue;
-        const mx = c + cw / 2, my = r + ch / 2;
-        let d = Math.min(toContent(mx, my) * 1.4, toFire(mx, my));
-        for (const [px, py] of placed) d = Math.min(d, Math.hypot(px - mx, py - my));
-        const score = d + hash(c, r, i + 31) * 1.6; // jitter breaks symmetry
-        if (!best || score > best.score) best = { c, r, d, score };
+        const d = Math.hypot(mx - tx, my - ty);
+        if (!best || d < best.d) best = { c, r, d };
       }
-    if (!best || best.d < minSpacing) return; // too crowded: leave it out
+    if (!best) return; // no room in this corner (very small screens): leave it out
     const { c, r } = best;
     el.style.left = `${x0 + c * t + (cw * t - el.offsetWidth) / 2}px`;
     el.style.top = `${y0 + r * t + (ch * t - el.offsetHeight) / 2}px`;
     el.style.visibility = "visible";
-    placed.push([c + cw / 2, r + ch / 2]);
-    for (let y = r; y < r + ch; y++) for (let x = c; x < c + cw; x++) grid[y][x] = true;
+    for (let y = r - 1; y <= r + ch; y++) for (let x = c - 1; x <= c + cw; x++) if (grid[y]?.[x] !== undefined) grid[y][x] = true;
+    taken.push([c + cw / 2, r + ch / 2]);
+    pieceBoxes.push([c - 1, r - 1, c + cw, r + ch]);
+  });
+
+  /* gray fillers: small, many, filling the gaps evenly. Each goes where it is farthest from everything already
+     there (content, fire, main pieces, other fillers), with a little hashed jitter so the spread isn't a lattice.
+     They may sit closer to the fire than the main pieces (a one-cell halo), and stop once gaps get too tight. */
+  // Fillers respect each content element's own outline (alien, logo, title, taglines, button) rather than the
+  // whole content box, so they can also sit in the open space beside the alien and the logo.
+  const toCells = (b: DOMRect, p: number): [number, number, number, number] => [
+    Math.floor((b.left - p - x0) / t),
+    Math.floor((b.top - p - y0) / t),
+    Math.ceil((b.right + p - x0) / t) - 1,
+    Math.ceil((b.bottom + p - y0) / t) - 1,
+  ];
+  // the headline and the CTA are the focal points: crumbs keep extra distance from them
+  const parts = [...stage.querySelector("[data-content]")!.children]
+    .filter((el) => el.getBoundingClientRect().width)
+    .map((el) => toCells(el.getBoundingClientRect(), t * (el.matches("h1, [data-cta]") ? 1.5 : 0.9)));
+  const loose = Array.from({ length: R }, () => new Array<boolean>(C).fill(false));
+  const block = ([c0, r0, c1, r1]: [number, number, number, number]) => {
+    for (let r = Math.max(0, r0); r <= Math.min(R - 1, r1); r++)
+      for (let c = Math.max(0, c0); c <= Math.min(C - 1, c1); c++) loose[r][c] = true;
+  };
+  parts.forEach(block);
+  pieceBoxes.forEach(block);
+  for (const [c, r] of fireCells) block([c - 1, r - 1, c + 1, r + 1]);
+  // distance from each cell to the nearest fire tile or content element, computed once
+  const clearance = loose.map((row, y) =>
+    row.map((_, x) => {
+      let m = Infinity;
+      for (const [c0, r0, c1, r1] of parts) m = Math.min(m, Math.hypot(Math.max(c0 - x, 0, x - c1), Math.max(r0 - y, 0, y - r1)) + 1);
+      for (const [c, r] of fireCells) m = Math.min(m, Math.hypot(c - x, r - y));
+      return m;
+    }),
+  );
+  stage.querySelectorAll<HTMLElement>("[data-filler]").forEach((el, i) => {
+    el.style.visibility = "hidden";
+    let best: { c: number; r: number; d: number; score: number } | null = null;
+    for (let r = 0; r < R; r++)
+      for (let c = 0; c < C; c++) {
+        if (loose[r][c] || x0 + c * t < 0 || y0 + r * t < 0 || x0 + (c + 1) * t > W || y0 + (r + 1) * t > H) continue;
+        let d = clearance[r][c];
+        for (const [px, py] of taken) d = Math.min(d, Math.hypot(px - c - 0.5, py - r - 0.5));
+        const score = d + hash(c, r, i + 71) * 0.9;
+        if (!best || score > best.score) best = { c, r, d, score };
+      }
+    if (!best || best.d < 2.2) return; // gaps are full
+    const { c, r } = best;
+    el.style.left = `${x0 + c * t + (t - el.offsetWidth) / 2}px`;
+    el.style.top = `${y0 + r * t + (t - el.offsetHeight) / 2}px`;
+    el.style.visibility = "visible";
+    loose[r][c] = true;
+    taken.push([c + 0.5, r + 0.5]);
   });
 }

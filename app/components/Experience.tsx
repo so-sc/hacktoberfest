@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { SplitText } from "gsap/SplitText";
@@ -51,7 +51,8 @@ export function Experience() {
   );
 
   /* ---- git push: the page empties from the centre outward, each kind of thing leaving its own way ---- */
-  const open = () =>
+  // `push` is false when the browser already moved to /submit (forward button)
+  const open = (push = true) =>
     contextSafe(() => {
       const r = root.current!;
       const q = gsap.utils.selector(r);
@@ -67,6 +68,8 @@ export function Experience() {
       tl.current?.kill();
       landing.current = false;
       setView("form");
+      // /submit is a real route: refreshing there loads the form directly, no animation
+      if (push) window.history.pushState(null, "", "/submit");
 
       const t = gsap.timeline({
         onComplete: () => (q("[data-panel-focus]")[0] as HTMLElement | undefined)?.focus(),
@@ -151,7 +154,7 @@ export function Experience() {
       t.to(q("[data-alien-shadow]"), { opacity: 0, scaleX: 0, duration: 0.4, ease: "power2.in" }, 0.2);
 
       // assets are flung outward; the inner ones go first
-      const assets = q("[data-asset]").map((el) => {
+      const assets = q("[data-asset], [data-filler]").map((el) => {
         const rc = el.getBoundingClientRect();
         const dx = rc.left + rc.width / 2 - cx;
         const dy = rc.top + rc.height / 2 - cy;
@@ -215,6 +218,20 @@ export function Experience() {
   // reversing the ease-ins plays them as ease-outs: everything settles back into place
   const close = () => contextSafe(() => tl.current?.timeScale(1.5).reverse())();
 
+  // browser back/forward drive the same transition as the buttons
+  const nav = useRef({ open, close });
+  useEffect(() => {
+    nav.current = { open, close };
+  });
+  useEffect(() => {
+    const onPop = () => {
+      if (location.pathname === "/" && !landing.current) nav.current.close();
+      else if (location.pathname === "/submit" && landing.current) nav.current.open(false);
+    };
+    addEventListener("popstate", onPop);
+    return () => removeEventListener("popstate", onPop);
+  }, []);
+
   return (
     <div
       ref={root}
@@ -235,16 +252,16 @@ export function Experience() {
                 onClick={(e) => hop(e.currentTarget.querySelector("svg"))}
                 className="cursor-pointer rounded-md"
               >
-                <Alien pixels className="w-[clamp(64px,min(22vw,13vh),156px)] drop-shadow-[0_14px_18px_rgb(17_115_47/0.25)]" />
+                <Alien pixels className="w-[clamp(56px,min(19vw,11vh),132px)] drop-shadow-[0_14px_18px_rgb(17_115_47/0.25)]" />
               </button>
-              <div aria-hidden className="-mt-1 h-3 w-[clamp(48px,min(16vw,9vh),110px)]">
+              <div aria-hidden className="-mt-1 h-3 w-[clamp(44px,min(14vw,8vh),94px)]">
                 <div data-alien-shadow className="size-full rounded-[50%] bg-ink/15 blur-md" />
               </div>
 
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img data-logo src="/sosc-logo.svg" alt="SOSC" className="mt-[clamp(0.4rem,1.6vh,1.1rem)] h-[clamp(20px,3.4vh,32px)] w-auto" />
+              <img data-logo src="/sosc-logo.svg" alt="SOSC" className="mt-[clamp(0.25rem,1vh,0.6rem)] h-[clamp(20px,3.4vh,32px)] w-auto" />
 
-              <h1 className="mt-[clamp(0.4rem,1.4vh,1rem)] flex flex-col items-center">
+              <h1 className="mt-[clamp(0.2rem,0.8vh,0.5rem)] flex flex-col items-center">
                 <span
                   data-title
                   className="font-display text-[clamp(2rem,min(8.6vw,10vh),6rem)] leading-[0.95] tracking-[-0.01em] uppercase"
@@ -255,7 +272,7 @@ export function Experience() {
                   <Rail side="left" />
                   <span
                     data-year
-                    className="font-display text-[clamp(1.75rem,min(6vw,7vh),4.5rem)] leading-none text-neon tabular-nums"
+                    className="font-display text-[clamp(1.5rem,min(5vw,6vh),3.75rem)] leading-none text-neon tabular-nums"
                   >
                     2026
                   </span>
@@ -271,7 +288,7 @@ export function Experience() {
               <div data-cta className="relative mt-[clamp(0.9rem,3vh,2.25rem)]">
                 <button
                   type="button"
-                  onClick={open}
+                  onClick={() => open()}
                   // flat call to action: label, a pixel arrow and a pixel underline, no box
                   className="group relative inline-flex min-h-12 cursor-pointer flex-col items-start gap-2 text-left"
                 >
@@ -289,7 +306,7 @@ export function Experience() {
           </main>
         </div>
 
-        <SubmissionPanel active={view === "form"} onBack={close} />
+        <SubmissionPanel active={view === "form"} onBack={() => window.history.back()} />
       </div>
     </div>
   );

@@ -87,7 +87,16 @@ async function updateSubmission(user: User, old: Submission, p: ParsedPr, type: 
 
 /* ---------- panel ---------- */
 
-export function SubmissionPanel({ active, onBack }: { active: boolean; onBack: () => void }) {
+export function SubmissionPanel({
+  active,
+  onBack,
+  standalone = false,
+}: {
+  active: boolean;
+  onBack: () => void;
+  /** rendered as its own page (/submit) instead of revealed over the landing */
+  standalone?: boolean;
+}) {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [authError, setAuthError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -152,9 +161,9 @@ export function SubmissionPanel({ active, onBack }: { active: boolean; onBack: (
       aria-label="Submit your pull requests"
       inert={!active}
       onKeyDown={(e) => e.key === "Escape" && onBack()}
-      className="invisible absolute inset-0 z-30 overflow-y-auto bg-paper"
+      className={`absolute inset-0 z-30 overflow-y-auto bg-paper ${standalone ? "" : "invisible"}`}
     >
-      <div className="relative mx-auto flex min-h-full w-full max-w-xl flex-col px-4 py-8 md:justify-center md:py-16">
+      <div className="relative mx-auto flex w-full max-w-xl flex-col px-4 pt-8 pb-16 md:pt-[12vh]">
         <div data-panel-item className="flex items-center justify-between gap-3 font-mono text-xs text-muted">
           <button
             type="button"
