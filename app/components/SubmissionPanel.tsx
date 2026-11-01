@@ -102,6 +102,7 @@ export function SubmissionPanel({
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<"submit" | "mine">("submit");
   const [items, setItems] = useState<Submission[] | null>(null);
+  const [badge, setBadge] = useState<string | null>(null);
   const closed = useClock((now) => now >= DEADLINE, false);
   const alienRef = useRef<HTMLSpanElement>(null);
 
@@ -136,6 +137,15 @@ export function SubmissionPanel({
       unsub();
       setItems(null);
     };
+  }, [user]);
+
+  // badges/{email} is written by badges/sync.mjs for participants who earned one
+  useEffect(() => {
+    if (!user?.email) return;
+    getDoc(doc(fb().db, "badges", user.email.toLowerCase()))
+      .then((d) => setBadge(d.exists() ? (d.get("fileId") as string) : null))
+      .catch(() => setBadge(null));
+    return () => setBadge(null);
   }, [user]);
 
   async function onSignIn() {
@@ -227,34 +237,45 @@ export function SubmissionPanel({
                 {authError && <ErrorText>{authError}</ErrorText>}
               </div>
             ) : (
-              <Tabs
-                tab={tab}
-                setTab={setTab}
-                count={items?.length}
-                submit={
-                  closed ? (
-                    <Notice>Submissions closed on 31 Oct. Thanks for shipping with SOSC!</Notice>
-                  ) : (
-                    <PrForm
-                      submitLabel="Submit PR"
-                      busyLabel="Submitting…"
-                      onSubmit={async (p, type, btn) => {
-                        await createSubmission(user, p, type);
-                        celebrate(btn);
-                        return `Logged ${p.owner}/${p.repo}#${p.number}. Got another?`;
-                      }}
+              <>
+                {badge && (
+                  <a
+                    href={`https://drive.google.com/uc?export=download&id=${badge}`}
+                    className="mt-7 inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-[4px] bg-neon px-5 font-display text-lg text-ink transition-[background-color,transform] hover:bg-neon-2 active:scale-[0.98]"
+                  >
+                    <Icon d="M12 4v11M7 10l5 5 5-5M5 20h14" className="size-5" />
+                    Download your badge
+                  </a>
+                )}
+                <Tabs
+                  tab={tab}
+                  setTab={setTab}
+                  count={items?.length}
+                  submit={
+                    closed ? (
+                      <Notice>Submissions closed on 31 Oct. Thanks for shipping with SOSC!</Notice>
+                    ) : (
+                      <PrForm
+                        submitLabel="Submit PR"
+                        busyLabel="Submitting…"
+                        onSubmit={async (p, type, btn) => {
+                          await createSubmission(user, p, type);
+                          celebrate(btn);
+                          return `Logged ${p.owner}/${p.repo}#${p.number}. Got another?`;
+                        }}
+                      />
+                    )
+                  }
+                  mine={
+                    <SubmissionList
+                      items={items}
+                      readOnly={closed}
+                      onEmpty={() => setTab("submit")}
+                      onUpdate={(old, p, type) => updateSubmission(user, old, p, type)}
                     />
-                  )
-                }
-                mine={
-                  <SubmissionList
-                    items={items}
-                    readOnly={closed}
-                    onEmpty={() => setTab("submit")}
-                    onUpdate={(old, p, type) => updateSubmission(user, old, p, type)}
-                  />
-                }
-              />
+                  }
+                />
+              </>
             )}
           </div>
         </div>

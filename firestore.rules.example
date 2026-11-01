@@ -44,5 +44,10 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt;
       allow delete: if member() && open() && owns(resource.data);
     }
+
+    // written only by badges/sync.mjs (admin); each member can read just their own
+    match /badges/{email} {
+      allow get: if member() && email == request.auth.token.email.lower();
+    }
   }
 }
